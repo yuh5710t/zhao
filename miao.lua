@@ -1,212 +1,329 @@
 -- =====================================================================
--- 索尼克中心 (极速狂飙版)
+-- 索尼克造船寻宝 [第一段]：经典开场 + 确认/复制公告
 -- =====================================================================
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
 
-local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.DisplayOrder = 9999
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 340, 0, 220)
-frame.Position = UDim2.new(0.5, -170, 0.5, -110)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-local stroke = Instance.new("UIStroke", frame)
-stroke.Color = Color3.fromRGB(218, 165, 32)
-stroke.Thickness = 1.5
+-- ==========================================
+-- 1. 经典 2D 索尼克加载动画
+-- ==========================================
+local IntroGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+IntroGui.DisplayOrder = 99999
+IntroGui.IgnoreGuiInset = true
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 40)
-title.Position = UDim2.new(0, 0, 0, 10)
-title.BackgroundTransparency = 1
-title.Text = "【 索尼克中心 】"
-title.TextColor3 = Color3.fromRGB(218, 165, 32)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 20
+-- 经典索尼克纯蓝背景
+local Bg = Instance.new("Frame", IntroGui)
+Bg.Size = UDim2.new(1, 0, 1, 0)
+Bg.BackgroundColor3 = Color3.fromRGB(0, 100, 200) -- 经典蓝
+Bg.BorderSizePixel = 0
 
-local desc = Instance.new("TextLabel", frame)
-desc.Size = UDim2.new(1, -40, 0, 100)
-desc.Position = UDim2.new(0, 20, 0, 55)
-desc.BackgroundTransparency = 1
-desc.Text = "作者：李佳  等级v12\n\n作者做一半不想做了\n本脚本为半成品，随时可能失效。\n凑合用吧，别指望更新了。"
-desc.TextColor3 = Color3.fromRGB(200, 200, 200)
-desc.TextSize = 14
-desc.Font = Enum.Font.Gotham
-desc.TextXAlignment = Enum.TextXAlignment.Left
-desc.TextYAlignment = Enum.TextYAlignment.Top
+-- 经典 2D 金环
+local Ring = Instance.new("Frame", Bg)
+Ring.Size = UDim2.new(0, 0, 0, 0)
+Ring.Position = UDim2.new(0.5, 0, 0.45, 0)
+Ring.BackgroundTransparency = 1
+local RingStroke = Instance.new("UIStroke", Ring)
+RingStroke.Color = Color3.fromRGB(255, 215, 0) -- 纯金
+RingStroke.Thickness = 16
+Instance.new("UICorner", Ring).CornerRadius = UDim.new(1, 0)
 
-local btn = Instance.new("TextButton", frame)
-btn.Size = UDim2.new(0, 220, 0, 40)
-btn.Position = UDim2.new(0.5, -110, 1, -55)
-btn.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
-btn.Text = "凑合用（点我启动）"
-btn.TextColor3 = Color3.fromRGB(20, 20, 20)
-btn.Font = Enum.Font.GothamBold
-btn.TextSize = 15
-Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+-- 经典文字
+local Title = Instance.new("TextLabel", Bg)
+Title.Size = UDim2.new(1, 0, 0, 60)
+Title.Position = UDim2.new(0, 0, 0.55, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "SONIC"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 48
+Title.TextStrokeTransparency = 0
+Title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+Title.TextTransparency = 1
 
-btn.MouseButton1Click:Connect(function()
-    gui:Destroy()
+-- 启动动画执行
+task.spawn(function()
+    TweenService:Create(Ring, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 200, 0, 200), Position = UDim2.new(0.5, -100, 0.45, -100)}):Play()
+    TweenService:Create(Title, TweenInfo.new(0.6), {TextTransparency = 0}):Play()
     
-    local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-    local Window = WindUI:CreateWindow({
-        Title = "索尼克中心", Author = "李佳", Folder = "SonicCore", Size = UDim2.fromOffset(460, 350), Theme = "Dark"
-    })
+    local spin = RunService.RenderStepped:Connect(function()
+        Ring.Rotation = Ring.Rotation + 10
+    end)
     
-    local char = player.Character or player.CharacterAdded:Wait()
-    local humanoid = char:WaitForChild("Humanoid")
-    local root = char:WaitForChild("HumanoidRootPart")
-    local isManualFlying = false
-    local isAutoFlying = false
-
-    -- 暴力解卡
-    local function ResetPhysics()
-        humanoid.PlatformStand = true
-        humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-        root.Anchored = false
-        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-        for _, c in ipairs(char:GetDescendants()) do
-            if (c:IsA("Weld") or c:IsA("WeldConstraint")) and c.Name ~= "RootJoint" then c:Destroy() end
-            if c:IsA("BasePart") then 
-                c.CanCollide = false 
-                c.Massless = true
-            end
-        end
-    end
-
-    -- 真实终点扫描
-    local function GetTargetZ()
-        local highestZ = 8500
-        for _, obj in pairs(workspace:GetDescendants()) do
-            local n = string.lower(obj.Name)
-            if (string.find(n, "end") or string.find(n, "win") or string.find(n, "gate") or string.find(n, "door")) and not string.find(n, "wing") then
-                local p = obj:IsA("BasePart") and obj.Position or (obj:IsA("Model") and obj.PrimaryPart and obj.PrimaryPart.Position)
-                if p and p.Z > highestZ then highestZ = p.Z end
-            end
-        end
-        return highestZ
-    end
-
-    -- 【极速狂飙引擎】：速度翻倍，但雷达依然生效
-    local function SpeedFly(targetZ, isAutoMode)
-        local rayParams = RaycastParams.new()
-        rayParams.FilterDescendantsInstances = {char}
-        rayParams.FilterType = Enum.RaycastFilterType.Exclude
-
-        local currentZ = root.Position.Z
-        local smoothY = 45 
-        local speed = 12 -- 【速度拉满】：每帧推进 12 格！
-
-        local stuckCounter = 0
-
-        while currentZ < targetZ do
-            if not isAutoMode and not isManualFlying then return end
-            if isAutoMode and not isAutoFlying then return end
-            
-            local pos = root.Position
-            
-            -- 雷达避障
-            local frontHit = workspace:Raycast(Vector3.new(pos.X, pos.Y, pos.Z), Vector3.new(0, 0, 40), rayParams)
-            local targetY = 45 
-            if frontHit then targetY = frontHit.Position.Y + 30 end
-            
-            -- 平滑防抖
-            smoothY = smoothY + (targetY - smoothY) * 0.3
-            
-            local oldZ = currentZ
-            currentZ = currentZ + speed
-            root.CFrame = CFrame.new(0, smoothY, currentZ)
-            
-            -- 卡死检测
-            if math.abs(currentZ - oldZ) < 0.1 then
-                stuckCounter = stuckCounter + 1
-                if stuckCounter > 5 then
-                    ResetPhysics()
-                    stuckCounter = 0
-                end
-            else
-                stuckCounter = 0
-            end
-            
-            RunService.Heartbeat:Wait()
-        end
-    end
-
-    -- 手动飞行面板
-    local MainTab = Window:Tab({ Title = "手动巡航", Icon = "anchor" })
-    MainTab:Button({
-        Title = "启动极速狂飙",
-        Callback = function()
-            if isManualFlying then return end
-            isManualFlying = true
-            ResetPhysics()
-            task.wait(0.1)
-            
-            SpeedFly(GetTargetZ(), false)
-            
-            if isManualFlying then
-                humanoid.PlatformStand = false
-                for _, p in pairs(char:GetDescendants()) do
-                    if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.CanCollide = true end
-                end
-                root.AssemblyLinearVelocity = Vector3.new(0, -100, 0)
-            end
-            isManualFlying = false
-        end
-    })
+    task.wait(2)
     
-    MainTab:Button({
-        Title = "紧急中止",
-        Callback = function()
-            isManualFlying = false
-            ResetPhysics()
-            humanoid.PlatformStand = false
-        end
-    })
-
-    -- 无限挂机面板
-    local AutoTab = Window:Tab({ Title = "无限挂机", Icon = "play" })
-    AutoTab:Toggle({
-        Title = "开启无限极速挂机",
-        Desc = "每帧 12 格，狂飙全自动循环",
-        Value = false,
-        Callback = function(state)
-            isAutoFlying = state
-            if state then
-                task.spawn(function()
-                    while isAutoFlying do
-                        ResetPhysics()
-                        root.CFrame = CFrame.new(0, 45, 0) 
-                        task.wait(0.3)
-                        
-                        SpeedFly(GetTargetZ(), true)
-                        
-                        if isAutoFlying then
-                            humanoid.PlatformStand = false
-                            for _, p in pairs(char:GetDescendants()) do
-                                if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.CanCollide = true end
-                            end
-                            root.AssemblyLinearVelocity = Vector3.new(0, -150, 0)
-                            task.wait(3) 
-                        end
-                    end
-                end)
-            end
-        end,
-    })
-
-    -- 系统重置
-    local SysTab = Window:Tab({ Title = "系统控制", Icon = "settings" })
-    SysTab:Button({
-        Title = "一键重置全部",
-        Callback = function()
-            isManualFlying = false
-            isAutoFlying = false
-            ResetPhysics()
-            humanoid.PlatformStand = false
-            game:GetService("StarterGui"):SetCore("SendNotification", {Title="重置", Text="功能已全部关闭"})
-        end
-    })
+    local outInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+    TweenService:Create(Bg, outInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(Ring, outInfo, {Size = UDim2.new(0, 600, 0, 600), Position = UDim2.new(0.5, -300, 0.45, -300)}):Play()
+    TweenService:Create(RingStroke, outInfo, {Transparency = 1}):Play()
+    TweenService:Create(Title, outInfo, {TextTransparency = 1, TextSize = 80}):Play()
+    
+    task.wait(0.8)
+    spin:Disconnect()
+    IntroGui:Destroy()
 end)
+
+-- ==========================================
+-- 2. 确认公告 (左加载，右复制)
+-- ==========================================
+task.wait(3)
+local NoticeGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+NoticeGui.DisplayOrder = 9999
+
+local Overlay = Instance.new("Frame", NoticeGui)
+Overlay.Size = UDim2.new(1, 0, 1, 0)
+Overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Overlay.BackgroundTransparency = 0.4
+Overlay.BorderSizePixel = 0
+
+local Frame = Instance.new("Frame", Overlay)
+Frame.Size = UDim2.new(0, 520, 0, 280)
+Frame.Position = UDim2.new(0.5, -260, 0.5, -140)
+Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 10)
+local Stroke = Instance.new("UIStroke", Frame)
+Stroke.Color = Color3.fromRGB(0, 150, 255)
+Stroke.Thickness = 2
+
+local T = Instance.new("TextLabel", Frame)
+T.Size = UDim2.new(1, 0, 0, 50)
+T.Position = UDim2.new(0, 0, 0, 20)
+T.BackgroundTransparency = 1
+T.Text = "【 索尼克造船寻宝 】"
+T.TextColor3 = Color3.fromRGB(0, 150, 255)
+T.Font = Enum.Font.GothamBold
+T.TextSize = 24
+
+local D = Instance.new("TextLabel", Frame)
+D.Size = UDim2.new(1, -40, 0, 100)
+D.Position = UDim2.new(0, 20, 0, 70)
+D.BackgroundTransparency = 1
+D.Text = "作者：李佳\n\n请选择加载脚本，或复制官方群号获取最新版本。"
+D.TextColor3 = Color3.fromRGB(200, 200, 200)
+D.Font = Enum.Font.Gotham
+D.TextSize = 16
+
+-- 左边的按钮：确定加载
+local LoadBtn = Instance.new("TextButton", Frame)
+LoadBtn.Size = UDim2.new(0, 220, 0, 50)
+LoadBtn.Position = UDim2.new(0, 30, 1, -70)
+LoadBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+LoadBtn.Text = "确定加载脚本"
+LoadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoadBtn.Font = Enum.Font.GothamBold
+LoadBtn.TextSize = 16
+Instance.new("UICorner", LoadBtn).CornerRadius = UDim.new(0, 6)
+
+-- 右边的按钮：复制群号
+local CopyBtn = Instance.new("TextButton", Frame)
+CopyBtn.Size = UDim2.new(0, 220, 0, 50)
+CopyBtn.Position = UDim2.new(1, -250, 1, -70)
+CopyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+CopyBtn.Text = "复制官方群号"
+CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopyBtn.Font = Enum.Font.GothamBold
+CopyBtn.TextSize = 16
+Instance.new("UICorner", CopyBtn).CornerRadius = UDim.new(0, 6)
+
+-- 【群号已填入】：1107284557
+local QQGroup = "1107284557" 
+CopyBtn.MouseButton1Click:Connect(function()
+    if setclipboard then
+        setclipboard(QQGroup)
+        CopyBtn.Text = "✅ 群号已复制！"
+        task.wait(2)
+        CopyBtn.Text = "复制官方群号"
+    end
+end)
+
+-- 加载脚本逻辑 (触发第二段)
+LoadBtn.MouseButton1Click:Connect(function()
+    Overlay:Destroy()
+    _G.SonicStart = true -- 给第二段传递启动信号
+end)-- =====================================================================
+-- 索尼克造船寻宝 [第二段]：高级悬浮窗 + 挂机 + 通用功能
+-- =====================================================================
+if not _G.SonicStart then return end
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- 1. 高级 WindUI 构建
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+local Window = WindUI:CreateWindow({
+    Title = "索尼克造船寻宝", Author = "李佳", Folder = "SonicBoat", Size = UDim2.fromOffset(480, 380), Theme = "Dark", Transparent = true
+})
+
+-- 全局状态与默认值
+local isAutoFlying = false
+local defaultSpeed = 16
+local defaultJump = 50
+local currentSpeed = defaultSpeed
+local currentJump = defaultJump
+
+-- 2. 核心物理引擎 (解卡 + 强推)
+local function ResetPhysics()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChild("Humanoid")
+    if not root or not hum then return end
+    
+    hum.PlatformStand = true
+    hum:ChangeState(Enum.HumanoidStateType.Physics)
+    root.Anchored = false
+    root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+    for _, c in ipairs(char:GetDescendants()) do
+        if (c:IsA("Weld") or c:IsA("WeldConstraint")) and c.Name ~= "RootJoint" then c:Destroy() end
+        if c:IsA("BasePart") then c.CanCollide = false end
+    end
+end
+
+local function Fly()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    ResetPhysics()
+    task.wait(0.1)
+    
+    local targetZ = 8500
+    local cz = root.Position.Z
+    
+    while cz < targetZ and (isAutoFlying) do
+        if not char.Parent or char.Humanoid.Health <= 0 then break end
+        cz = cz + 15
+        root.CFrame = CFrame.new(0, 45, cz)
+        RunService.Heartbeat:Wait()
+    end
+end
+
+-- 3. 帧率显示器 (FPS) 逻辑
+local fpsGui = Instance.new("ScreenGui")
+fpsGui.Name = "FPS_Monitor"
+fpsGui.ResetOnSpawn = false
+fpsGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local fpsLabel = Instance.new("TextLabel", fpsGui)
+fpsLabel.Size = UDim2.new(0, 100, 0, 30)
+fpsLabel.Position = UDim2.new(0, 10, 0, 10)
+fpsLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+fpsLabel.BackgroundTransparency = 0.5
+fpsLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
+fpsLabel.Font = Enum.Font.Code
+fpsLabel.TextSize = 14
+fpsLabel.Text = "FPS: 60"
+fpsLabel.Visible = false
+Instance.new("UICorner", fpsLabel).CornerRadius = UDim.new(0, 4)
+
+-- 帧率计算线程
+local frames = 0
+local lastTime = tick()
+RunService.RenderStepped:Connect(function()
+    frames = frames + 1
+    if tick() - lastTime >= 1 then
+        if fpsLabel.Visible then
+            fpsLabel.Text = "FPS: " .. frames
+        end
+        frames = 0
+        lastTime = tick()
+    end
+end)
+
+-- 4. 角色重生监听 (保持修改的属性不丢失)
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(1) -- 等待角色加载
+    if char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = currentSpeed
+        char.Humanoid.JumpPower = currentJump
+    end
+end)
+
+-- ==========================================
+-- UI 面板挂载
+-- ==========================================
+
+-- 标签页 1：自动巡航
+local MainTab = Window:Tab({ Title = "自动巡航", Icon = "anchor" })
+MainTab:Button({
+    Title = "单次极速起飞",
+    Callback = function()
+        isAutoFlying = false
+        task.spawn(function()
+            local temp = isAutoFlying
+            isAutoFlying = true
+            Fly()
+            isAutoFlying = temp
+        end)
+    end
+})
+MainTab:Toggle({
+    Title = "开启无限全自动挂机",
+    Desc = "死循环复活起飞，无需人工干预",
+    Value = false,
+    Callback = function(s)
+        isAutoFlying = s
+        if s then
+            task.spawn(function()
+                while isAutoFlying do
+                    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                    if char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+                        Fly()
+                        task.wait(5) 
+                    else
+                        task.wait(1)
+                    end
+                end
+            end)
+        end
+    end
+})
+
+-- 标签页 2：通用功能 (全新添加)
+local GeneralTab = Window:Tab({ Title = "通用功能", Icon = "settings" })
+
+GeneralTab:Toggle({
+    Title = "显示实时帧率 (FPS)",
+    Desc = "在屏幕左上角显示当前游戏帧数",
+    Value = false,
+    Callback = function(state)
+        fpsLabel.Visible = state
+    end
+})
+
+GeneralTab:Slider({
+    Title = "移动速度调整",
+    Desc = "拉取滑动条调整人物行走速度 (默认16)",
+    Value = {
+        Min = 16,
+        Max = 150,
+        Default = 16,
+    },
+    Callback = function(val)
+        currentSpeed = val
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.WalkSpeed = val
+        end
+    end
+})
+
+GeneralTab:Slider({
+    Title = "跳跃高度调整",
+    Desc = "拉取滑动条调整人物跳跃力 (默认50)",
+    Value = {
+        Min = 50,
+        Max = 300,
+        Default = 50,
+    },
+    Callback = function(val)
+        currentJump = val
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.JumpPower = val
+        end
+    end
+})
